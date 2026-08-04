@@ -1,0 +1,13 @@
+name = "surfboard-worker"
+main = "dist/worker.js"
+compatibility_date = "2024-11-01"
+
+# 必填:你的订阅链接
+# 例:SUBSCRIPTION_URL = "https://provider.example/api/v1/xxx"
+
+# 可选:只提取密码匹配的节点,不设置则不过滤
+# PASSWORD_FILTER = ""
+
+[vars]
+# SUBSCRIPTION_URL = "在这里粘贴订阅链接"
+# PASSWORD_FILTER = ""
