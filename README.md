@@ -7,7 +7,8 @@ Cloudflare Worker: 实时将订阅链接转换为 **Surfboard 完整配置** (HY
 ## 功能
 
 - 拉取订阅 → 过滤 hysteria2 链接 → 生成完整 `.conf`
-- `[General]`、`[Proxy]`、`[Proxy Group]`、`[Rule]` 全自动构建
+- `[General]`、`[Panel]`、`[Proxy]`、`[Proxy Group]`、`[Rule]` 全自动构建
+- 自动从订阅中提取流量信息生成 `[Panel]` 订阅信息面板
 - 地区分组: **HK → SG → JP → KR → TW → UK → US**
 - 23 个代理组: YouTube、Netflix、Spotify、Telegram 等
 - 4231 条规则内置 (gzip 压缩)

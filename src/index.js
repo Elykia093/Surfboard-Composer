@@ -3,7 +3,7 @@
  * 把订阅链接实时转换为 Surfboard 完整配置
  */
 import { getConfig } from './config';
-import { extractNodes } from './parser';
+import { extractNodes, extractSubscribeInfo } from './parser';
 import { buildProxySection } from './transform';
 import { buildGroups } from './groups';
 import { decodeRules } from './rules';
@@ -27,7 +27,11 @@ export default {
     }
 
     try {
-      const resp = await fetch(subscriptionUrl);
+      const resp = await fetch(subscriptionUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
       if (!resp.ok) {
         return new Response(`Upstream subscription failed: ${resp.status}`, { status: 502 });
       }
@@ -39,12 +43,14 @@ export default {
       }
 
       const rules = await decodeRules();
+      const subscribeInfo = extractSubscribeInfo(text);
       const conf = [
         `[General]\n${GENERAL_TEMPLATE}`,
+        subscribeInfo ? `[Panel]\nSubscribeInfo = title=订阅信息, content=${subscribeInfo}, style=info` : null,
         `[Proxy]\n${buildProxySection(nodes)}`,
         buildGroups(nodes),
         `[Rule]\n${rules}`,
-      ].join('\n\n');
+      ].filter(Boolean).join('\n\n');
 
       return new Response(conf, {
         headers: {

@@ -66,3 +66,65 @@ export function extractNodes(text, passwordFilter) {
   }
   return nodes;
 }
+
+/**
+ * 从订阅文本中提取订阅信息 (如剩余流量、到期时间等)
+ * 这些信息以 vless:// 等非 hysteria2 节点的名字形式出现
+ * @param {string} text - 原始订阅文本 (base64 或明文)
+ * @returns {string} - 信息内容,如 "剩余流量:975.26 GB\n套餐到期:长期有效"
+ */
+export function extractSubscribeInfo(text) {
+  let decoded;
+  try {
+    decoded = atob(text.replace(/\s/g, ''));
+  } catch {
+    decoded = text;
+  }
+
+  const lines = decoded.split(/\r?\n/);
+  const infoItems = [];
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith('hysteria2://')) continue;
+
+    const hashIdx = t.indexOf('#');
+    if (hashIdx < 0) continue;
+
+    const name = t.slice(hashIdx + 1);
+    if (!name) continue;
+
+    let decodedName;
+    try {
+      decodedName = decodeURIComponent(name);
+    } catch {
+      continue;
+    }
+
+    // 提取信息标签: 剩余流量、上传流量、下载流量、套餐流量、套餐到期、到期时间
+    if (
+      decodedName.startsWith('剩余流量') ||
+      decodedName.startsWith('上传流量') ||
+      decodedName.startsWith('下载流量') ||
+      decodedName.startsWith('套餐流量') ||
+      decodedName.startsWith('套餐到期') ||
+      decodedName.startsWith('到期时间')
+    ) {
+      const normalized = decodedName.replace(/：/g, ':');
+      infoItems.push(normalized);
+    }
+  }
+
+  // 去重
+  const seen = new Set();
+  const unique = [];
+  for (const item of infoItems) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      unique.push(item);
+    }
+  }
+
+  return unique.join('\\n');
+}
