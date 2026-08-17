@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://getsurfboard.com/">
+    <img src="https://getsurfboard.com/img/logo.png" alt="Surfboard Logo" width="112">
+  </a>
+</p>
+
 # Surfboard Composer
+
+> 非官方项目。Surfboard 名称与 Logo 归其权利人所有；本项目仅提供配置转换能力。
 
 [![CI](https://github.com/Elykia093/Surfboard-Composer/actions/workflows/ci.yml/badge.svg)](https://github.com/Elykia093/Surfboard-Composer/actions/workflows/ci.yml)
 
