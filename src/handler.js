@@ -3,13 +3,20 @@
  */
 import { buildManagedConfigLine, getConfig } from "./config.js";
 import { GENERAL_TEMPLATE } from "./general.js";
-import { extractNodes, extractSubscribeInfo } from "./parser.js";
+import {
+  extractNodes,
+  extractRemainingTrafficBytes,
+  extractSubscribeInfo,
+} from "./parser.js";
 import { buildProxySection, buildWireGuardSections } from "./transform.js";
 import { buildGroups } from "./groups.js";
 import { decodeRules } from "./rules.js";
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const MAX_UPSTREAM_BYTES = 5 * 1024 * 1024;
+const MAX_UPSTREAM_HEADER_LENGTH = 1024;
+const DEFAULT_PROFILE_FILENAME = "Surfboard.conf";
+const SUBSCRIPTION_USERINFO_KEYS = ["upload", "download", "total", "expire"];
 
 class UpstreamError extends Error {
   constructor(message) {
@@ -47,6 +54,131 @@ function textResponse(message, status) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+function sanitizeSubscriptionUserinfo(value) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > MAX_UPSTREAM_HEADER_LENGTH ||
+    /[\r\n]/.test(value)
+  ) {
+    return null;
+  }
+
+  const fields = new Map();
+  for (const part of value.split(";")) {
+    const field = part.trim();
+    if (!field) continue;
+
+    const match = field.match(/^([a-z][a-z0-9_-]*)\s*=\s*([^\s;]+)$/i);
+    if (!match) return null;
+
+    const key = match[1].toLowerCase();
+    if (!SUBSCRIPTION_USERINFO_KEYS.includes(key)) continue;
+    if (!/^\d{1,20}$/.test(match[2]) || fields.has(key)) return null;
+    fields.set(key, match[2]);
+  }
+
+  const normalized = SUBSCRIPTION_USERINFO_KEYS.filter((key) => fields.has(key))
+    .map((key) => `${key}=${fields.get(key)}`)
+    .join("; ");
+  return normalized || null;
+}
+
+function buildSubscriptionUserinfo(subscription) {
+  if (subscription.subscriptionUserinfo) {
+    return subscription.subscriptionUserinfo;
+  }
+
+  const remainingBytes = extractRemainingTrafficBytes(subscription.text);
+  return remainingBytes
+    ? `upload=0; download=0; total=${remainingBytes}; expire=0`
+    : null;
+}
+
+function unwrapDispositionValue(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1).replace(/\\(["\\])/g, "$1");
+  }
+  return trimmed;
+}
+
+function sanitizeProfileFilename(value) {
+  if (typeof value !== "string") return null;
+
+  const filename = value.normalize("NFC").trim();
+  if (
+    !filename ||
+    filename === "." ||
+    filename === ".." ||
+    /[\u0000-\u001f\u007f-\u009f/\\<>:"|?*]/.test(filename) ||
+    new TextEncoder().encode(filename).byteLength > 180
+  ) {
+    return null;
+  }
+  return filename;
+}
+
+function extractProfileFilename(contentDisposition) {
+  if (
+    typeof contentDisposition !== "string" ||
+    contentDisposition.length === 0 ||
+    contentDisposition.length > MAX_UPSTREAM_HEADER_LENGTH ||
+    /[\r\n]/.test(contentDisposition)
+  ) {
+    return null;
+  }
+
+  const extended = contentDisposition.match(
+    /(?:^|;)\s*filename\*\s*=\s*("(?:\\.|[^"])*"|[^;]*)/i,
+  );
+  if (extended) {
+    const value = unwrapDispositionValue(extended[1]);
+    const encoded = value.match(/^utf-8'[^']*'(.*)$/i);
+    if (encoded) {
+      try {
+        const filename = sanitizeProfileFilename(
+          decodeURIComponent(encoded[1]),
+        );
+        if (filename) return filename;
+      } catch {
+        // Fall through to the basic filename parameter.
+      }
+    }
+  }
+
+  const basic = contentDisposition.match(
+    /(?:^|;)\s*filename\s*=\s*("(?:\\.|[^"])*"|[^;]*)/i,
+  );
+  if (!basic) return null;
+
+  let value = unwrapDispositionValue(basic[1]);
+  if (/%[0-9a-f]{2}/i.test(value)) {
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      return null;
+    }
+  }
+  return sanitizeProfileFilename(value);
+}
+
+function encodeDispositionFilename(value) {
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+function buildContentDisposition(filename) {
+  if (!filename) return `attachment; filename="${DEFAULT_PROFILE_FILENAME}"`;
+
+  const fallback = /^[\x20-\x7e]+$/.test(filename)
+    ? filename
+    : DEFAULT_PROFILE_FILENAME;
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeDispositionFilename(filename)}`;
 }
 
 function readRoute(url) {
@@ -137,7 +269,15 @@ async function fetchSubscription(subscriptionUrl) {
     });
     if (!response.ok)
       throw new UpstreamError("Subscription provider unavailable");
-    return await readLimitedText(response);
+    return {
+      text: await readLimitedText(response),
+      subscriptionUserinfo: sanitizeSubscriptionUserinfo(
+        response.headers.get("subscription-userinfo"),
+      ),
+      filename: extractProfileFilename(
+        response.headers.get("content-disposition"),
+      ),
+    };
   } catch (error) {
     if (error instanceof PayloadTooLargeError) throw error;
     if (error instanceof ConfigurationError) throw error;
@@ -194,18 +334,23 @@ export async function handleRequest(request, env = {}) {
   publicUrl.search = "";
 
   try {
-    const subscriptionText = await fetchSubscription(subscriptionUrl);
+    const subscription = await fetchSubscription(subscriptionUrl);
     const body = await buildConfigBody(
       publicUrl,
-      subscriptionText,
+      subscription.text,
       passwordFilter,
     );
+    const headers = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Content-Disposition": buildContentDisposition(subscription.filename),
+      "Cache-Control": "no-store",
+    };
+    const subscriptionUserinfo = buildSubscriptionUserinfo(subscription);
+    if (subscriptionUserinfo) {
+      headers["Subscription-Userinfo"] = subscriptionUserinfo;
+    }
     return new Response(body, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="surfboard.conf"',
-        "Cache-Control": "no-store",
-      },
+      headers,
     });
   } catch (error) {
     if (error instanceof ConfigurationError) {

@@ -680,7 +680,7 @@ export function extractNodes(text, passwordFilter) {
  * @param {string} text - 原始订阅文本 (base64 或明文)
  * @returns {string} - 信息内容,如 "剩余流量:975.26 GB\n套餐到期:长期有效"
  */
-export function extractSubscribeInfo(text) {
+function extractSubscribeInfoItems(text) {
   const decoded = decodeBase64Text(text) || text;
 
   const lines = decoded.split(/\r?\n/);
@@ -731,5 +731,43 @@ export function extractSubscribeInfo(text) {
     }
   }
 
-  return unique.join("\\n");
+  return unique;
+}
+
+export function extractSubscribeInfo(text) {
+  return extractSubscribeInfoItems(text).join("\\n");
+}
+
+/**
+ * 从订阅信息节点中提取剩余流量并换算为 bytes。
+ * @param {string} text - 原始订阅文本 (base64 或明文)
+ * @returns {string|null} - 十进制 bytes 字符串
+ */
+export function extractRemainingTrafficBytes(text) {
+  const units = {
+    b: 1n,
+    kb: 1024n,
+    mb: 1024n ** 2n,
+    gb: 1024n ** 3n,
+    tb: 1024n ** 4n,
+    pb: 1024n ** 5n,
+  };
+
+  for (const item of extractSubscribeInfoItems(text)) {
+    const match = item.match(
+      /^剩余流量\s*:\s*(\d{1,12})(?:\.(\d{1,6}))?\s*(B|KB|MB|GB|TB|PB)\b/i,
+    );
+    if (!match) continue;
+
+    const fraction = match[2] || "";
+    const divisor = 10n ** BigInt(fraction.length);
+    const scaledValue = BigInt(`${match[1]}${fraction}`);
+    const bytes = (
+      (scaledValue * units[match[3].toLowerCase()]) /
+      divisor
+    ).toString();
+    if (bytes.length <= 20) return bytes;
+  }
+
+  return null;
 }

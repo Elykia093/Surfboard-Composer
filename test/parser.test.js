@@ -3,8 +3,12 @@
  */
 import { describe, it, assert, assertEq } from "./helpers.js";
 
-const { parseNode, extractNodes, extractSubscribeInfo } =
-  await import("../src/parser.js");
+const {
+  parseNode,
+  extractNodes,
+  extractSubscribeInfo,
+  extractRemainingTrafficBytes,
+} = await import("../src/parser.js");
 
 describe("parseNode - hysteria2", () => {
   it("parses full link with port hopping", () => {
@@ -327,5 +331,26 @@ describe("extractSubscribeInfo", () => {
       "vless://uuid@a.com:443#%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F%3A1%0A%5BRule%5D%0AFINAL%2CDIRECT",
     );
     assertEq(info, "剩余流量:1 [Rule] FINAL，DIRECT");
+  });
+
+  it("converts remaining traffic to binary bytes", () => {
+    const text =
+      "vless://uuid@a.com:443/#%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F%EF%BC%9A954.73%20GB";
+    assertEq(extractRemainingTrafficBytes(text), "1025133531627");
+  });
+
+  it("ignores malformed or unrelated traffic values", () => {
+    assertEq(
+      extractRemainingTrafficBytes(
+        "vless://uuid@a.com:443/#%E5%A5%97%E6%B5%81%E9%87%8F%EF%BC%9A954.73%20GB",
+      ),
+      null,
+    );
+    assertEq(
+      extractRemainingTrafficBytes(
+        "vless://uuid@a.com:443/#%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F%3A999999999999%20PB",
+      ),
+      null,
+    );
   });
 });
