@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .env
+.dev.vars
+.wrangler/
+.vercel/
+wrangler.toml
+sub_proto.txt
 *.conf
 !*.example
 !templates/rules.txt.gz

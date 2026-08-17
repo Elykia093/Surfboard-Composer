@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/sub/:token",
+      "destination": "/api/sub/:token",
+      "transforms": [
+        {
+          "type": "request.path",
+          "op": "set",
+          "args": "/sub/:token"
+        }
+      ]
+    }
+  ]
+}

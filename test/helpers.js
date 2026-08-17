@@ -19,12 +19,14 @@ export function it(name, fn) {
 
 export function assert(cond, msg) {
   if (!cond) {
-    throw new Error(msg || 'assertion failed');
+    throw new Error(msg || "assertion failed");
   }
 }
 
 export function assertEq(actual, expected, msg) {
   if (actual !== expected) {
-    throw new Error(`${msg || 'not equal'}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    throw new Error(
+      `${msg || "not equal"}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
   }
 }

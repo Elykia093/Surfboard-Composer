@@ -1,19 +1,20 @@
 {
-  "name": "surfboard-worker",
+  "name": "surfboard-composer",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Cloudflare Worker: 订阅链接 → Surfboard 完整配置 (HY2 only)",
+  "description": "Surfboard Composer: subscription links to Surfboard profiles on Workers and Vercel Edge",
   "scripts": {
-    "build": "node scripts/build.cjs",
+    "build": "node scripts/generate-rules-data.cjs && node scripts/build.cjs",
+    "generate-rules": "node scripts/generate-rules-data.cjs",
     "test": "node test/run.js",
     "deploy": "npm run build && wrangler deploy",
-    "lint": "prettier --check src/ test/ *.js",
-    "lint:fix": "prettier --write src/ test/ *.js"
+    "lint": "prettier --check src test scripts api *.json",
+    "lint:fix": "prettier --write src test scripts api *.json"
   },
   "devDependencies": {
-    "esbuild": "^0.19.0",
+    "esbuild": "^0.28.2",
     "prettier": "^3.0.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.123.0"
   }
 }
