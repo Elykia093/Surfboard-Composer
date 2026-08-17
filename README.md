@@ -1,6 +1,6 @@
 # Surfboard Composer
 
-[![CI](https://github.com/Elykia093/Surfboard-worker/actions/workflows/ci.yml/badge.svg)](https://github.com/Elykia093/Surfboard-worker/actions/workflows/ci.yml)
+[![CI](https://github.com/Elykia093/Surfboard-Composer/actions/workflows/ci.yml/badge.svg)](https://github.com/Elykia093/Surfboard-Composer/actions/workflows/ci.yml)
 
 Cloudflare Workers + Vercel Edge: 实时将订阅链接转换为 **Surfboard 完整配置**。
 
@@ -22,8 +22,8 @@ Cloudflare Workers + Vercel Edge: 实时将订阅链接转换为 **Surfboard 完
 ### 1. 克隆
 
 ```bash
-git clone https://github.com/Elykia093/Surfboard-worker.git
-cd Surfboard-worker
+git clone https://github.com/Elykia093/Surfboard-Composer.git
+cd Surfboard-Composer
 npm install
 ```
 
