@@ -9,6 +9,7 @@ const [rewrite] = vercelConfig.rewrites;
 
 assert.equal(edgeConfig.runtime, "edge");
 assert.equal(vercelConfig.functions, undefined);
+assert.equal(vercelConfig.outputDirectory, "dist");
 assert.equal(rewrite.source, "/sub/:token");
 assert.equal(rewrite.destination, "/api/sub/:token");
 assert.deepEqual(rewrite.transforms, [

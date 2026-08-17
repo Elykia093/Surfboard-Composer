@@ -63,7 +63,7 @@ npm run deploy
 
 ### 5. Vercel Edge 部署
 
-导入仓库后保持默认构建设置，在 Vercel 项目环境变量中设置 `ACCESS_TOKEN`、`SUBSCRIPTION_URL`，可选设置 `PASSWORD_FILTER`。`vercel.json` 会把 `/sub/<token>` 转发到 Edge Function，同时保留运行时可见的公开路径；直接访问内部 `/api/sub/...` 会返回 404。
+导入仓库后在 Vercel 项目环境变量中设置 `ACCESS_TOKEN`、`SUBSCRIPTION_URL`，可选设置 `PASSWORD_FILTER`。Vercel 会运行项目构建并从 `dist/` 读取静态产物；`vercel.json` 会把 `/sub/<token>` 转发到 Edge Function，同时保留运行时可见的公开路径；直接访问内部 `/api/sub/...` 会返回 404。
 
 ## 访问
 
