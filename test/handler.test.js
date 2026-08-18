@@ -124,9 +124,14 @@ await useFetch(
     const body = await response.text();
     assert.match(
       body,
-      /^Proxies = select,Auto,Fallback,US,Traffic: 954\.73 GB,/m,
+      /^Proxies = select,Auto,Fallback,US,Traffic: 954\.73 GB,HK-01$/m,
     );
-    assert.match(body, /^Traffic: 954\.73 GB = select,Auto$\n\n\[Rule\]/m);
+    assert.match(body, /^Traffic: 954\.73 GB = direct$/m);
+    assert.match(
+      body,
+      /^US = url-test,HK-01,url=http:\/\/www\.gstatic\.com\/generate_204,interval=600$/m,
+    );
+    assert.doesNotMatch(body, /^Traffic: 954\.73 GB = select,/m);
   },
 );
 

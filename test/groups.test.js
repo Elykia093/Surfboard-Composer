@@ -54,10 +54,16 @@ describe("buildGroups", () => {
     assert(output.includes("[Proxy Group]"), "has section header");
     assert(output.includes("Proxies = select,"), "has Proxies");
     assert(output.includes("YouTube = select,Proxies,"), "has YouTube");
-    assert(output.includes("HK = select,"), "has HK group");
-    assert(output.includes("SG = select,"), "has SG group");
-    assert(output.includes("JP = select,"), "has JP group");
-    assert(output.includes("US = select,"), "has US group");
+    assert(output.includes("HK = url-test,"), "has automatic HK group");
+    assert(output.includes("SG = url-test,"), "has automatic SG group");
+    assert(output.includes("JP = url-test,"), "has automatic JP group");
+    assert(output.includes("US = url-test,"), "has automatic US group");
+    assert(
+      output.includes(
+        "HK = url-test,🇭🇰香港01|BGP|住宅IP,url=http://www.gstatic.com/generate_204,interval=600",
+      ),
+      "region groups select the lowest-latency node",
+    );
     assert(output.includes("Final = select,Proxies,DIRECT"), "has Final");
     assert(output.includes("Bilibili = select,DIRECT,HK"), "has Bilibili");
   });
@@ -69,7 +75,7 @@ describe("buildGroups", () => {
     assert(output.includes("Bilibili = select,DIRECT"), "Bilibili fallback");
   });
 
-  it("adds Auto/Fallback and makes Traffic follow Auto", () => {
+  it("keeps Traffic in Proxies without a Traffic group definition", () => {
     const output = buildGroups(
       [{ name: "香港01" }, { name: "新加坡01" }, { name: "美国01" }],
       "Traffic: 954.73 GB",
@@ -78,7 +84,7 @@ describe("buildGroups", () => {
       output.includes(
         "Proxies = select,Auto,Fallback,HK,SG,US,Traffic: 954.73 GB,香港01,新加坡01,美国01",
       ),
-      "Auto/Fallback lead and Traffic follows US",
+      "Auto/Fallback lead and Traffic stays in Proxies",
     );
     assert(
       output.includes(
@@ -93,12 +99,14 @@ describe("buildGroups", () => {
       "Fallback checks all nodes in order",
     );
     assert(
-      output.includes("Traffic: 954.73 GB = select,Auto"),
-      "Traffic follows Auto",
+      !output.includes("Traffic: 954.73 GB = "),
+      "Traffic group definition is omitted",
     );
     assert(
-      output.endsWith("Traffic: 954.73 GB = select,Auto"),
-      "Traffic group is last",
+      output.endsWith(
+        "US = url-test,美国01,url=http://www.gstatic.com/generate_204,interval=600",
+      ),
+      "last group is the final region group",
     );
   });
 
@@ -109,6 +117,11 @@ describe("buildGroups", () => {
         "Proxies = select,Auto,Fallback,US,Traffic: 954.73 GB,美国01",
       ),
     );
-    assert(output.endsWith("Traffic: 954.73 GB = select,Auto"));
+    assert(!output.includes("Traffic: 954.73 GB = "));
+    assert(
+      output.endsWith(
+        "US = url-test,美国01,url=http://www.gstatic.com/generate_204,interval=600",
+      ),
+    );
   });
 });

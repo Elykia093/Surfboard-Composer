@@ -182,10 +182,14 @@ function formatWireGuard(node) {
 /**
  * 生成 [Proxy] 节全部内容
  * @param {object[]} nodes
+ * @param {string|null} [directProxyName] - 额外的直连代理名称
  * @returns {string}
  */
-export function buildProxySection(nodes) {
+export function buildProxySection(nodes, directProxyName = null) {
   const lines = ["DIRECT = direct"];
+  if (directProxyName) {
+    lines.push(`${sanitizeNodeName(directProxyName)} = direct`);
+  }
   const names = buildUniqueNodeNames(nodes);
   for (const [index, node] of nodes.entries()) {
     const line = toSurfboardProxy({ ...node, name: names[index] });

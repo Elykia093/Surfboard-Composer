@@ -304,7 +304,7 @@ async function buildConfigBody(publicUrl, subscriptionText, passwordFilter) {
     subscribeInfo
       ? `[Panel]\nSubscribeInfo = title=订阅信息, content=${subscribeInfo}, style=info`
       : null,
-    `[Proxy]\n${buildProxySection(nodes)}`,
+    `[Proxy]\n${buildProxySection(nodes, trafficLabel)}`,
     buildWireGuardSections(nodes),
     buildGroups(nodes, trafficLabel),
     `[Rule]\n${rules}`,
