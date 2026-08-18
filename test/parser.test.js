@@ -8,6 +8,7 @@ const {
   extractNodes,
   extractSubscribeInfo,
   extractRemainingTrafficBytes,
+  extractRemainingTrafficLabel,
 } = await import("../src/parser.js");
 
 describe("parseNode - hysteria2", () => {
@@ -337,6 +338,15 @@ describe("extractSubscribeInfo", () => {
     const text =
       "vless://uuid@a.com:443/#%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F%EF%BC%9A954.73%20GB";
     assertEq(extractRemainingTrafficBytes(text), "1025133531627");
+    assertEq(extractRemainingTrafficLabel(text), "Traffic: 954.73 GB");
+  });
+
+  it("extracts info labels from supported protocol nodes", () => {
+    const userinfo = btoa("aes-256-gcm:secret");
+    const text = `ss://${userinfo}@info.example:8388#%E5%89%A9%E4%BD%99%E6%B5%81%E9%87%8F%EF%BC%9A954.73%20GB`;
+    assertEq(extractSubscribeInfo(text), "剩余流量:954.73 GB");
+    assertEq(extractRemainingTrafficLabel(text), "Traffic: 954.73 GB");
+    assertEq(extractNodes(text).length, 0, "metadata node excluded");
   });
 
   it("ignores malformed or unrelated traffic values", () => {

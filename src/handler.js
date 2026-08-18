@@ -6,6 +6,7 @@ import { GENERAL_TEMPLATE } from "./general.js";
 import {
   extractNodes,
   extractRemainingTrafficBytes,
+  extractRemainingTrafficLabel,
   extractSubscribeInfo,
 } from "./parser.js";
 import { buildProxySection, buildWireGuardSections } from "./transform.js";
@@ -297,6 +298,7 @@ async function buildConfigBody(publicUrl, subscriptionText, passwordFilter) {
 
   const rules = await decodeRules();
   const subscribeInfo = extractSubscribeInfo(subscriptionText);
+  const trafficLabel = extractRemainingTrafficLabel(subscriptionText);
   const sections = [
     `[General]\n${GENERAL_TEMPLATE}`,
     subscribeInfo
@@ -304,7 +306,7 @@ async function buildConfigBody(publicUrl, subscriptionText, passwordFilter) {
       : null,
     `[Proxy]\n${buildProxySection(nodes)}`,
     buildWireGuardSections(nodes),
-    buildGroups(nodes),
+    buildGroups(nodes, trafficLabel),
     `[Rule]\n${rules}`,
   ]
     .filter(Boolean)

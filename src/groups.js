@@ -1,11 +1,13 @@
 /**
  * 代理组构建
- * Proxies 顺序:地区组在前,节点在后。地区顺序固定 HK, SG, JP, KR, TW, UK, US。
+ * Proxies 顺序:地区组、Traffic 虚拟组、节点。地区顺序固定 HK, SG, JP, KR, TW, UK, US。
  */
 import { buildUniqueNodeNames, sanitizeNodeName } from "./names.js";
 
 // 地区分组顺序
 export const REGION_ORDER = ["HK", "SG", "JP", "KR", "TW", "UK", "US"];
+const HEALTH_CHECK_URL = "https://www.gstatic.com/generate_204";
+const HEALTH_CHECK_INTERVAL = 600;
 
 // 服务分组 (不带 DIRECT)
 const STREAMING_GROUPS = [
@@ -59,19 +61,48 @@ export function groupByRegion(
   return known.concat(unknown).map((r) => ({ region: r, names: byRegion[r] }));
 }
 
+function sanitizeTrafficLabel(value) {
+  if (typeof value !== "string") return null;
+  const label = value.trim();
+  return /^Traffic: \d{1,12}(?:\.\d{1,6})? (?:B|KB|MB|GB|TB|PB)$/.test(label)
+    ? label
+    : null;
+}
+
 /**
  * 生成 [Proxy Group] 节
  * @param {object[]} nodes
+ * @param {string|null} [trafficLabel]
  * @returns {string}
  */
-export function buildGroups(nodes) {
+export function buildGroups(nodes, trafficLabel = null) {
   const names = buildUniqueNodeNames(nodes);
   const groups = groupByRegion(nodes, names);
   const regionList = groups.map((g) => g.region).join(",");
+  const safeTrafficLabel = sanitizeTrafficLabel(trafficLabel);
+  const nodeList = names.join(",");
 
   const lines = ["[Proxy Group]", ""];
-  // Proxies: 地区组在前,节点在后
-  lines.push(`Proxies = select,${regionList},${names.join(",")}`);
+  // Proxies: 地区组在前,Traffic 紧随 US,自动/故障转移组和节点在后
+  const proxyEntries = [
+    regionList,
+    safeTrafficLabel,
+    "Auto",
+    "Fallback",
+    nodeList,
+  ]
+    .filter(Boolean)
+    .join(",");
+  lines.push(`Proxies = select,${proxyEntries}`);
+  lines.push(
+    `Auto = url-test,${nodeList},url=${HEALTH_CHECK_URL},interval=${HEALTH_CHECK_INTERVAL}`,
+  );
+  lines.push(
+    `Fallback = fallback,${nodeList},url=${HEALTH_CHECK_URL},interval=${HEALTH_CHECK_INTERVAL}`,
+  );
+  if (safeTrafficLabel) {
+    lines.push(`${safeTrafficLabel} = select,Auto`);
+  }
 
   // 服务分组
   for (const g of STREAMING_GROUPS) {

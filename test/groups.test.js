@@ -68,4 +68,43 @@ describe("buildGroups", () => {
     assert(output.includes("Bahamut = select,Proxies"), "Bahamut fallback");
     assert(output.includes("Bilibili = select,DIRECT"), "Bilibili fallback");
   });
+
+  it("adds Auto/Fallback and makes Traffic follow Auto", () => {
+    const output = buildGroups(
+      [{ name: "香港01" }, { name: "新加坡01" }, { name: "美国01" }],
+      "Traffic: 954.73 GB",
+    );
+    assert(
+      output.includes(
+        "Proxies = select,HK,SG,US,Traffic: 954.73 GB,Auto,Fallback,香港01,新加坡01,美国01",
+      ),
+      "Traffic follows US",
+    );
+    assert(
+      output.includes(
+        "Auto = url-test,香港01,新加坡01,美国01,url=https://www.gstatic.com/generate_204,interval=600",
+      ),
+      "Auto tests all nodes",
+    );
+    assert(
+      output.includes(
+        "Fallback = fallback,香港01,新加坡01,美国01,url=https://www.gstatic.com/generate_204,interval=600",
+      ),
+      "Fallback checks all nodes in order",
+    );
+    assert(
+      output.includes("Traffic: 954.73 GB = select,Auto"),
+      "Traffic follows Auto",
+    );
+  });
+
+  it("keeps automatic groups available without HK", () => {
+    const output = buildGroups([{ name: "美国01" }], "Traffic: 954.73 GB");
+    assert(
+      output.includes(
+        "Proxies = select,US,Traffic: 954.73 GB,Auto,Fallback,美国01",
+      ),
+    );
+    assert(output.includes("Traffic: 954.73 GB = select,Auto"));
+  });
 });

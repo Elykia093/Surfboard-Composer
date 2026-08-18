@@ -121,6 +121,12 @@ await useFetch(
       response.headers.get("content-disposition"),
       'attachment; filename="Surfboard.conf"',
     );
+    const body = await response.text();
+    assert.match(
+      body,
+      /^Proxies = select,US,Traffic: 954\.73 GB,Auto,Fallback,/m,
+    );
+    assert.match(body, /^Traffic: 954\.73 GB = select,Auto$/m);
   },
 );
 

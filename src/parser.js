@@ -652,6 +652,22 @@ export function parseNode(link) {
   return isValidNode(node) ? node : null;
 }
 
+const SUBSCRIBE_INFO_PREFIXES = [
+  "剩余流量",
+  "上传流量",
+  "下载流量",
+  "套餐流量",
+  "套餐到期",
+  "到期时间",
+];
+
+function isSubscribeInfoName(value) {
+  return (
+    typeof value === "string" &&
+    SUBSCRIBE_INFO_PREFIXES.some((prefix) => value.trim().startsWith(prefix))
+  );
+}
+
 /**
  * 从订阅文本中提取所有 Surfboard 支持的节点
  * @param {string} text - 原始订阅文本 (base64 或明文)
@@ -668,6 +684,7 @@ export function extractNodes(text, passwordFilter) {
     if (!t) continue;
     const node = parseNode(t);
     if (!node) continue;
+    if (isSubscribeInfoName(node.name)) continue;
     if (passwordFilter && node.password !== passwordFilter) continue;
     nodes.push(node);
   }
@@ -690,10 +707,10 @@ function extractSubscribeInfoItems(text) {
     const t = line.trim();
     if (!t) continue;
 
-    // 跳过 Surfboard 支持的协议节点 (它们的 #名字 是真实节点名,不是订阅信息)
+    // 支持协议节点也可能承载供应商的流量/到期信息标签。
     const schemeMatch = t.match(/^([a-z][a-z0-9-]*):\/\//i);
-    if (schemeMatch && SUPPORTED_PROTOCOLS[schemeMatch[1].toLowerCase()])
-      continue;
+    const supportedProtocol =
+      schemeMatch && SUPPORTED_PROTOCOLS[schemeMatch[1].toLowerCase()];
 
     const hashIdx = t.indexOf("#");
     if (hashIdx < 0) continue;
@@ -708,16 +725,13 @@ function extractSubscribeInfoItems(text) {
       .trim();
 
     // 提取信息标签: 剩余流量、上传流量、下载流量、套餐流量、套餐到期、到期时间
-    if (
-      decodedName.startsWith("剩余流量") ||
-      decodedName.startsWith("上传流量") ||
-      decodedName.startsWith("下载流量") ||
-      decodedName.startsWith("套餐流量") ||
-      decodedName.startsWith("套餐到期") ||
-      decodedName.startsWith("到期时间")
-    ) {
+    const isInfoItem = isSubscribeInfoName(decodedName);
+    if (isInfoItem) {
       const normalized = decodedName.replace(/：/g, ":");
       infoItems.push(normalized);
+    } else if (supportedProtocol) {
+      // 支持协议节点的 #名字 是真实节点名，不是订阅信息。
+      continue;
     }
   }
 
@@ -738,21 +752,16 @@ export function extractSubscribeInfo(text) {
   return extractSubscribeInfoItems(text).join("\\n");
 }
 
-/**
- * 从订阅信息节点中提取剩余流量并换算为 bytes。
- * @param {string} text - 原始订阅文本 (base64 或明文)
- * @returns {string|null} - 十进制 bytes 字符串
- */
-export function extractRemainingTrafficBytes(text) {
-  const units = {
-    b: 1n,
-    kb: 1024n,
-    mb: 1024n ** 2n,
-    gb: 1024n ** 3n,
-    tb: 1024n ** 4n,
-    pb: 1024n ** 5n,
-  };
+const TRAFFIC_UNITS = {
+  b: 1n,
+  kb: 1024n,
+  mb: 1024n ** 2n,
+  gb: 1024n ** 3n,
+  tb: 1024n ** 4n,
+  pb: 1024n ** 5n,
+};
 
+function findRemainingTraffic(text) {
   for (const item of extractSubscribeInfoItems(text)) {
     const match = item.match(
       /^剩余流量\s*:\s*(\d{1,12})(?:\.(\d{1,6}))?\s*(B|KB|MB|GB|TB|PB)\b/i,
@@ -763,11 +772,36 @@ export function extractRemainingTrafficBytes(text) {
     const divisor = 10n ** BigInt(fraction.length);
     const scaledValue = BigInt(`${match[1]}${fraction}`);
     const bytes = (
-      (scaledValue * units[match[3].toLowerCase()]) /
+      (scaledValue * TRAFFIC_UNITS[match[3].toLowerCase()]) /
       divisor
     ).toString();
-    if (bytes.length <= 20) return bytes;
+    if (bytes.length <= 20) {
+      return {
+        amount: fraction ? `${match[1]}.${fraction}` : match[1],
+        unit: match[3].toUpperCase(),
+        bytes,
+      };
+    }
   }
 
   return null;
+}
+
+/**
+ * 从订阅信息节点中提取剩余流量并换算为 bytes。
+ * @param {string} text - 原始订阅文本 (base64 或明文)
+ * @returns {string|null} - 十进制 bytes 字符串
+ */
+export function extractRemainingTrafficBytes(text) {
+  return findRemainingTraffic(text)?.bytes ?? null;
+}
+
+/**
+ * 返回用于代理组显示的剩余流量标签。
+ * @param {string} text - 原始订阅文本 (base64 或明文)
+ * @returns {string|null} - 如 "Traffic: 954.73 GB"
+ */
+export function extractRemainingTrafficLabel(text) {
+  const traffic = findRemainingTraffic(text);
+  return traffic ? `Traffic: ${traffic.amount} ${traffic.unit}` : null;
 }
