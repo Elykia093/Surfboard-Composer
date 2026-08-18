@@ -29,10 +29,17 @@ assert.equal(
 );
 assert.match(buildWireGuardSections([wireguard]), /\[WireGuard WG01\]/);
 assert.match(buildWireGuardSections([wireguard]), /private-key = private-key/);
-assert.match(buildGroups([wireguard]), /US = select,WG01/);
+assert.match(
+  buildGroups([wireguard]),
+  /US = url-test,WG01,url=http:\/\/www\.gstatic\.com\/generate_204,interval=600/,
+);
 assert.match(
   buildProxySection([wireguard]),
   /^DIRECT = direct\nWG01 = wireguard/m,
+);
+assert.match(
+  buildProxySection([wireguard], "Traffic: 954.73 GB"),
+  /^DIRECT = direct\nTraffic: 954\.73 GB = direct\nWG01 = wireguard/m,
 );
 
 const wireguardV6 = parseNode(
@@ -47,7 +54,10 @@ assert.match(proxySection, /^WG01 2 = wireguard/m);
 assert.match(wireGuardSections, /\[WireGuard WG01\]/);
 assert.match(wireGuardSections, /\[WireGuard WG01 2\]/);
 assert.match(wireGuardSections, /endpoint = \[2001:db8::1\]:51820/);
-assert.match(groups, /US = select,WG01,WG01 2/);
+assert.match(
+  groups,
+  /US = url-test,WG01,WG01 2,url=http:\/\/www\.gstatic\.com\/generate_204,interval=600/,
+);
 
 const reservedName = parseNode("hysteria2://pw@node.example:443#DIRECT");
 assert.match(buildProxySection([reservedName]), /^DIRECT 2 = hysteria2/m);

@@ -1,7 +1,6 @@
 /**
  * 代理组构建
- * Proxies 选择项顺序:Auto、Fallback、地区组、Traffic 虚拟组、节点。
- * Traffic 组定义位于 [Proxy Group] 末尾。
+ * Proxies 选择项顺序:Auto、Fallback、地区组、Traffic 直连条目、节点。
  * 地区顺序固定 HK, SG, JP, KR, TW, UK, US。
  */
 import { buildUniqueNodeNames, sanitizeNodeName } from "./names.js";
@@ -24,6 +23,14 @@ const STREAMING_GROUPS = [
 
 // 服务分组 (带 DIRECT 兜底)
 const DIRECT_GROUPS = ["Spotify", "Steam", "Microsoft", "PayPal", "Apple"];
+
+function sanitizeTrafficLabel(value) {
+  if (typeof value !== "string") return null;
+  const label = value.trim();
+  return /^Traffic: \d{1,12}(?:\.\d{1,6})? (?:B|KB|MB|GB|TB|PB)$/.test(label)
+    ? label
+    : null;
+}
 
 /**
  * 根据节点名判断地区
@@ -63,14 +70,6 @@ export function groupByRegion(
   return known.concat(unknown).map((r) => ({ region: r, names: byRegion[r] }));
 }
 
-function sanitizeTrafficLabel(value) {
-  if (typeof value !== "string") return null;
-  const label = value.trim();
-  return /^Traffic: \d{1,12}(?:\.\d{1,6})? (?:B|KB|MB|GB|TB|PB)$/.test(label)
-    ? label
-    : null;
-}
-
 /**
  * 生成 [Proxy Group] 节
  * @param {object[]} nodes
@@ -85,7 +84,7 @@ export function buildGroups(nodes, trafficLabel = null) {
   const nodeList = names.join(",");
 
   const lines = ["[Proxy Group]", ""];
-  // Proxies: 自动/故障转移组在前,地区组随后,Traffic 紧随 US,节点在后
+  // Proxies: 自动/故障转移组在前,地区组随后,Traffic 直连条目,节点在后
   const proxyEntries = [
     "Auto",
     "Fallback",
@@ -119,16 +118,11 @@ export function buildGroups(nodes, trafficLabel = null) {
   lines.push(`Bilibili = select,DIRECT${preferredSuffix}`);
   lines.push("Final = select,Proxies,DIRECT");
 
-  // 地区分组
+  // 地区分组自动测速并选择延迟最低的节点
   for (const g of groups) {
     lines.push(
-      `${g.region} = select,${g.names.map((name) => sanitizeNodeName(name)).join(",")}`,
+      `${g.region} = url-test,${g.names.map((name) => sanitizeNodeName(name)).join(",")},url=${HEALTH_CHECK_URL},interval=${HEALTH_CHECK_INTERVAL}`,
     );
-  }
-
-  // Traffic 保留在主选择列表中,但将组定义放在整个区段最后
-  if (safeTrafficLabel) {
-    lines.push(`${safeTrafficLabel} = select,Auto`);
   }
 
   return lines.join("\n");
