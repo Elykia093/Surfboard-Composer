@@ -17,7 +17,7 @@ Cloudflare Workers + Vercel Edge: 实时将订阅链接转换为 **Surfboard 完
 - 拉取订阅 → 解析 Surfboard 支持的订阅协议 → 生成完整 `.conf`
 - `[General]`、`[Panel]`、`[Proxy]`、`[Proxy Group]`、`[Rule]` 全自动构建
 - 自动从订阅中提取流量信息生成 `[Panel]` 订阅信息面板
-- 生成 `Auto`（测速择优）和 `Fallback`（按顺序故障转移）组；`Traffic: 剩余流量` 作为虚拟组紧随 `US` 并跟随 `Auto`
+- 主选择列表以 `Auto`（测速择优）、`Fallback`（按顺序故障转移）开头；`Traffic: 剩余流量` 作为虚拟组紧随 `US` 并跟随 `Auto`
 - 透传标准 `subscription-userinfo` 流量统计；上游缺失时从正文剩余流量生成，并安全沿用上游文件名（默认 `Surfboard.conf`）
 - 地区分组: **HK → SG → JP → KR → TW → UK → US**
 - 23 个代理组: YouTube、Netflix、Spotify、Telegram 等

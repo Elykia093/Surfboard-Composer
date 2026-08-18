@@ -76,19 +76,19 @@ describe("buildGroups", () => {
     );
     assert(
       output.includes(
-        "Proxies = select,HK,SG,US,Traffic: 954.73 GB,Auto,Fallback,香港01,新加坡01,美国01",
+        "Proxies = select,Auto,Fallback,HK,SG,US,Traffic: 954.73 GB,香港01,新加坡01,美国01",
       ),
-      "Traffic follows US",
+      "Auto/Fallback lead and Traffic follows US",
     );
     assert(
       output.includes(
-        "Auto = url-test,香港01,新加坡01,美国01,url=https://www.gstatic.com/generate_204,interval=600",
+        "Auto = url-test,香港01,新加坡01,美国01,url=http://www.gstatic.com/generate_204,interval=600",
       ),
       "Auto tests all nodes",
     );
     assert(
       output.includes(
-        "Fallback = fallback,香港01,新加坡01,美国01,url=https://www.gstatic.com/generate_204,interval=600",
+        "Fallback = fallback,香港01,新加坡01,美国01,url=http://www.gstatic.com/generate_204,interval=600",
       ),
       "Fallback checks all nodes in order",
     );
@@ -102,7 +102,7 @@ describe("buildGroups", () => {
     const output = buildGroups([{ name: "美国01" }], "Traffic: 954.73 GB");
     assert(
       output.includes(
-        "Proxies = select,US,Traffic: 954.73 GB,Auto,Fallback,美国01",
+        "Proxies = select,Auto,Fallback,US,Traffic: 954.73 GB,美国01",
       ),
     );
     assert(output.includes("Traffic: 954.73 GB = select,Auto"));

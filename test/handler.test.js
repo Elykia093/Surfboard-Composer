@@ -124,7 +124,7 @@ await useFetch(
     const body = await response.text();
     assert.match(
       body,
-      /^Proxies = select,US,Traffic: 954\.73 GB,Auto,Fallback,/m,
+      /^Proxies = select,Auto,Fallback,US,Traffic: 954\.73 GB,/m,
     );
     assert.match(body, /^Traffic: 954\.73 GB = select,Auto$/m);
   },

@@ -1,12 +1,13 @@
 /**
  * 代理组构建
- * Proxies 顺序:地区组、Traffic 虚拟组、节点。地区顺序固定 HK, SG, JP, KR, TW, UK, US。
+ * Proxies 顺序:Auto、Fallback、地区组、Traffic 虚拟组、节点。
+ * 地区顺序固定 HK, SG, JP, KR, TW, UK, US。
  */
 import { buildUniqueNodeNames, sanitizeNodeName } from "./names.js";
 
 // 地区分组顺序
 export const REGION_ORDER = ["HK", "SG", "JP", "KR", "TW", "UK", "US"];
-const HEALTH_CHECK_URL = "https://www.gstatic.com/generate_204";
+const HEALTH_CHECK_URL = "http://www.gstatic.com/generate_204";
 const HEALTH_CHECK_INTERVAL = 600;
 
 // 服务分组 (不带 DIRECT)
@@ -83,12 +84,12 @@ export function buildGroups(nodes, trafficLabel = null) {
   const nodeList = names.join(",");
 
   const lines = ["[Proxy Group]", ""];
-  // Proxies: 地区组在前,Traffic 紧随 US,自动/故障转移组和节点在后
+  // Proxies: 自动/故障转移组在前,地区组随后,Traffic 紧随 US,节点在后
   const proxyEntries = [
-    regionList,
-    safeTrafficLabel,
     "Auto",
     "Fallback",
+    regionList,
+    safeTrafficLabel,
     nodeList,
   ]
     .filter(Boolean)
