@@ -96,6 +96,10 @@ describe("buildGroups", () => {
       output.includes("Traffic: 954.73 GB = select,Auto"),
       "Traffic follows Auto",
     );
+    assert(
+      output.endsWith("Traffic: 954.73 GB = select,Auto"),
+      "Traffic group is last",
+    );
   });
 
   it("keeps automatic groups available without HK", () => {
@@ -105,6 +109,6 @@ describe("buildGroups", () => {
         "Proxies = select,Auto,Fallback,US,Traffic: 954.73 GB,美国01",
       ),
     );
-    assert(output.includes("Traffic: 954.73 GB = select,Auto"));
+    assert(output.endsWith("Traffic: 954.73 GB = select,Auto"));
   });
 });

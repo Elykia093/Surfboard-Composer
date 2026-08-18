@@ -126,7 +126,7 @@ await useFetch(
       body,
       /^Proxies = select,Auto,Fallback,US,Traffic: 954\.73 GB,/m,
     );
-    assert.match(body, /^Traffic: 954\.73 GB = select,Auto$/m);
+    assert.match(body, /^Traffic: 954\.73 GB = select,Auto$\n\n\[Rule\]/m);
   },
 );
 

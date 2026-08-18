@@ -1,6 +1,7 @@
 /**
  * 代理组构建
- * Proxies 顺序:Auto、Fallback、地区组、Traffic 虚拟组、节点。
+ * Proxies 选择项顺序:Auto、Fallback、地区组、Traffic 虚拟组、节点。
+ * Traffic 组定义位于 [Proxy Group] 末尾。
  * 地区顺序固定 HK, SG, JP, KR, TW, UK, US。
  */
 import { buildUniqueNodeNames, sanitizeNodeName } from "./names.js";
@@ -101,10 +102,6 @@ export function buildGroups(nodes, trafficLabel = null) {
   lines.push(
     `Fallback = fallback,${nodeList},url=${HEALTH_CHECK_URL},interval=${HEALTH_CHECK_INTERVAL}`,
   );
-  if (safeTrafficLabel) {
-    lines.push(`${safeTrafficLabel} = select,Auto`);
-  }
-
   // 服务分组
   for (const g of STREAMING_GROUPS) {
     lines.push(`${g} = select,Proxies,${regionList}`);
@@ -127,6 +124,11 @@ export function buildGroups(nodes, trafficLabel = null) {
     lines.push(
       `${g.region} = select,${g.names.map((name) => sanitizeNodeName(name)).join(",")}`,
     );
+  }
+
+  // Traffic 保留在主选择列表中,但将组定义放在整个区段最后
+  if (safeTrafficLabel) {
+    lines.push(`${safeTrafficLabel} = select,Auto`);
   }
 
   return lines.join("\n");
